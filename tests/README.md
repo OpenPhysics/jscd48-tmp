@@ -281,12 +281,3 @@ npm run test:e2e -- --trace on
 2. Add explicit waits
 3. Check for race conditions
 4. Use `waitForLoadState('networkidle')`
-
-## Contributing
-
-When adding new features:
-
-1. Add unit tests for core functionality
-2. Add integration tests for workflows
-3. Add E2E tests for UI features
-4. Update this README if needed

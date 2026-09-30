@@ -16,8 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - JSDoc documentation generation
 - CI workflow for automated testing and linting
 - Release automation workflow
-- CONTRIBUTING.md with development guidelines
-- CODE_OF_CONDUCT.md for community standards
 - Multiple example applications:
   - Error handling example
   - Data export example (CSV/JSON)

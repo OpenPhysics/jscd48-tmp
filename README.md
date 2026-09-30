@@ -489,7 +489,6 @@ jscd48/
 - **[README.md](README.md)** - This file
 - **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
 - **[ERROR_HANDLING.md](ERROR_HANDLING.md)** - Error handling guide
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contributing guidelines
 - **[CHANGELOG.md](CHANGELOG.md)** - Version history
 - **[ACCESSIBILITY.md](ACCESSIBILITY.md)** - Accessibility features
 - **[tests/README.md](tests/README.md)** - Testing documentation
@@ -552,30 +551,6 @@ The Web Serial API requires:
 - **Secure context** - HTTPS or localhost only
 
 This prevents websites from silently accessing serial devices.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details.
-
-Quick start:
-
-```bash
-# Fork and clone
-git clone https://github.com/YOUR-USERNAME/jscd48.git
-cd jscd48
-
-# Install (sets up Git hooks)
-npm install
-
-# Create feature branch
-git checkout -b feat/my-feature
-
-# Make changes and commit (hooks run automatically)
-git commit -m "feat: add my feature"
-
-# Push and create PR
-git push origin feat/my-feature
-```
 
 ## 📄 License
 
