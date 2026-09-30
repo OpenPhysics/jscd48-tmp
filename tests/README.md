@@ -1,6 +1,6 @@
 # Testing Infrastructure
 
-Comprehensive test suite for the CD48 library including unit tests, integration tests, E2E tests, and visual regression testing.
+Comprehensive test suite for the CD48 library including unit tests, integration tests, accessibility, and E2E tests.
 
 ## Test Structure
 
@@ -8,7 +8,8 @@ Comprehensive test suite for the CD48 library including unit tests, integration 
 tests/
 ├── e2e/                      # End-to-end tests
 │   ├── examples.spec.js      # Tests for all example pages
-│   ├── visual-regression.spec.js  # Visual regression tests
+│   ├── main-interface.spec.js     # Main interface tests
+│   ├── accessibility.spec.js      # Accessibility tests
 │   └── error-scenarios.spec.js    # Error handling tests
 ├── integration/              # Integration tests
 │   └── cd48-integration.test.js   # Mock hardware tests
@@ -44,19 +45,11 @@ npm run test:integration      # Run integration tests with mock hardware
 ```bash
 npm run test:e2e              # Run all E2E tests
 npm run test:e2e:examples     # Test all example pages
-npm run test:e2e:visual       # Visual regression tests
 npm run test:e2e:errors       # Error scenario tests
 npm run test:e2e:headed       # Run with browser visible
 npm run test:e2e:ui           # Run with Playwright UI
 npm run test:e2e:debug        # Debug mode
 npm run test:e2e:report       # View HTML report
-```
-
-### Visual Regression Tests
-
-```bash
-npm run test:e2e:visual               # Compare against baselines
-npm run test:e2e:update-snapshots     # Update baseline screenshots
 ```
 
 ## Test Coverage
@@ -129,19 +122,6 @@ Tests for all 11 example pages:
 - ✅ Invalid data
 - ✅ Error recovery
 
-### Visual Regression Tests
-
-Screenshots captured for:
-
-- ✅ Examples index (initial, search, filtered)
-- ✅ Code playground (initial, with code)
-- ✅ Simple monitor
-- ✅ Statistical analysis
-- ✅ Calibration wizard
-- ✅ Component states (hover, active)
-- ✅ Responsive (mobile, tablet, desktop)
-- ✅ Dark theme consistency
-
 ## Mock CD48 Device
 
 The `MockCD48` class simulates a real CD48 device without hardware:
@@ -169,40 +149,6 @@ const data = await cd48.getCounts();
 - Test helpers (setCounts, failNextCommand, setDisconnectAfter)
 - No hardware required
 
-## Visual Regression Testing
-
-Visual tests capture screenshots and compare against baseline images.
-
-### Initial Setup
-
-1. Run tests to create baseline screenshots:
-
-   ```bash
-   npm run test:e2e:update-snapshots
-   ```
-
-2. Baselines are stored in `tests/e2e/*.spec.js-snapshots/`
-
-### Running Visual Tests
-
-```bash
-npm run test:e2e:visual
-```
-
-### Updating Baselines
-
-When intentional UI changes are made:
-
-```bash
-npm run test:e2e:update-snapshots
-```
-
-### Screenshot Locations
-
-- Desktop: `tests/e2e/visual-regression.spec.js-snapshots/chromium/`
-- Mobile: `tests/e2e/visual-regression.spec.js-snapshots/chromium/*-mobile.png`
-- Tablet: `tests/e2e/visual-regression.spec.js-snapshots/chromium/*-tablet.png`
-
 ## Continuous Integration
 
 Tests run automatically on:
@@ -217,7 +163,6 @@ Tests run automatically on:
 - Retries flaky tests (2 retries)
 - Uploads test artifacts
 - Generates coverage reports
-- Creates visual regression diffs
 
 ## Writing New Tests
 
@@ -265,18 +210,6 @@ test('my new feature', async ({ page }) => {
 });
 ```
 
-### Visual Regression Tests
-
-```javascript
-test('my visual test', async ({ page }) => {
-  await page.goto('/my-page');
-  await expect(page).toHaveScreenshot('my-screenshot.png', {
-    fullPage: true,
-    animations: 'disabled',
-  });
-});
-```
-
 ## Test Best Practices
 
 1. **Keep tests isolated** - Each test should be independent
@@ -286,7 +219,6 @@ test('my visual test', async ({ page }) => {
 5. **Clean up resources** - Disconnect devices, clear state
 6. **Handle async properly** - Use async/await
 7. **Use appropriate timeouts** - Don't make tests flaky
-8. **Update snapshots carefully** - Review visual changes
 
 ## Debugging Tests
 
@@ -319,21 +251,10 @@ npm run test:e2e -- tests/e2e/examples.spec.js
 npm run test:e2e -- --trace on
 ```
 
-### Visual Regression
-
-```bash
-# Compare and show diff
-npm run test:e2e:visual
-
-# View diffs in report
-npm run test:e2e:report
-```
-
 ## Test Metrics
 
 - **Total Tests**: 100+ across all suites
 - **E2E Coverage**: 11 example pages
-- **Visual Tests**: 15+ screenshots
 - **Integration Tests**: 20+ scenarios
 - **Error Scenarios**: 15+ cases
 
@@ -345,13 +266,6 @@ npm run test:e2e:report
 2. Clear test artifacts: `rm -rf tests/e2e-report`
 3. Update dependencies: `npm install`
 4. Check for port conflicts (8080)
-
-### Visual Tests Failing
-
-1. Different screen resolution? Update viewport settings
-2. Font rendering differences? Update baselines
-3. Animation timing? Increase wait times
-4. Legitimate change? Update snapshots
 
 ### Flaky Tests
 
@@ -367,5 +281,4 @@ When adding new features:
 1. Add unit tests for core functionality
 2. Add integration tests for workflows
 3. Add E2E tests for UI features
-4. Add visual tests for new pages
-5. Update this README if needed
+4. Update this README if needed

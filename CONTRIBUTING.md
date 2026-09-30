@@ -1,10 +1,12 @@
+> **Archived.** This repository is no longer maintained; please contribute to [tscd48](https://github.com/OpenPhysics/tscd48) instead.
+
 # Contributing to jscd48
 
 Thank you for your interest in contributing to jscd48! This document provides guidelines and instructions for contributing to the project.
 
 ## Code of Conduct
 
-By participating in this project, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md).
+Please be respectful and constructive in issues, pull requests, and reviews.
 
 ## Getting Started
 
