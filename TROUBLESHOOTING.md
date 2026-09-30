@@ -408,7 +408,7 @@ window.addEventListener('load', async () => {
 ## Additional Resources
 
 - [Web Serial API Documentation](https://developer.mozilla.org/en-US/docs/Web/API/Web_Serial_API)
-- [CD48 Hardware Manual](https://github.com/OpenPhysics/jscd48)
+- [CD48 Hardware Manual](https://github.com/OpenPhysics/jscd48-tmp)
 - [Error Handling Guide](./ERROR_HANDLING.md)
 - [API Documentation](./docs/api)
 
@@ -416,7 +416,7 @@ window.addEventListener('load', async () => {
 
 If you're still experiencing issues:
 
-1. Check the [Issues](https://github.com/OpenPhysics/jscd48/issues) page
+1. Check the [Issues](https://github.com/OpenPhysics/jscd48-tmp/issues) page
 2. Review the [examples](./examples) directory
 3. Enable debug logging to gather more information:
    ```javascript

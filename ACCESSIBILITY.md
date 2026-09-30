@@ -222,7 +222,7 @@ Planned accessibility improvements:
 
 If you encounter accessibility barriers while using jscd48:
 
-1. **Open an issue** on GitHub: https://github.com/OpenPhysics/jscd48/issues
+1. **Open an issue** on GitHub: https://github.com/OpenPhysics/jscd48-tmp/issues
 2. **Use the template** "Accessibility Issue"
 3. **Provide details:**
    - Browser and version
@@ -253,4 +253,4 @@ Recommended tools for testing accessibility:
 
 Last updated: 2026-01-16
 Maintainer: OpenPhysics Contributors
-Contact: https://github.com/OpenPhysics/jscd48/issues
+Contact: https://github.com/OpenPhysics/jscd48-tmp/issues

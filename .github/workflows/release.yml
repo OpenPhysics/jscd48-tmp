@@ -151,7 +151,7 @@ jobs:
             CHANGELOG=$(sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | sed '$d')
 
             if [ -z "$CHANGELOG" ]; then
-              CHANGELOG="See [CHANGELOG.md](https://github.com/OpenPhysics/jscd48/blob/main/CHANGELOG.md) for details."
+              CHANGELOG="See [CHANGELOG.md](https://github.com/OpenPhysics/jscd48-tmp/blob/main/CHANGELOG.md) for details."
             fi
           else
             CHANGELOG="No changelog available."

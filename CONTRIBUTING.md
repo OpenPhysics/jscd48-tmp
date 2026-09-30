@@ -1,4 +1,4 @@
-> **Archived.** This repository is no longer maintained; please contribute to [tscd48](https://github.com/OpenPhysics/tscd48) instead.
+> **Archived.** This repository is no longer maintained; please contribute to [tscd48](https://github.com/OpenPhysics/tscd48-tmp) instead.
 
 # Contributing to jscd48
 
@@ -12,7 +12,7 @@ Please be respectful and constructive in issues, pull requests, and reviews.
 
 ### Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 22.12+ and npm 10+ (CI runs Node 24)
 - A modern browser (Chrome 89+, Edge 89+, or Opera 76+) for testing
 - Git for version control
 - (Optional) A CD48 Coincidence Counter device for hardware testing
@@ -31,7 +31,7 @@ Please be respectful and constructive in issues, pull requests, and reviews.
 3. **Add the upstream repository**:
 
    ```bash
-   git remote add upstream https://github.com/OpenPhysics/jscd48.git
+   git remote add upstream https://github.com/OpenPhysics/jscd48-tmp.git
    ```
 
 4. **Install dependencies**:
@@ -283,15 +283,16 @@ npm test -- --watch
 ```
 jscd48/
 ├── cd48.js              # Main library
-├── cd48.d.ts            # TypeScript definitions
+├── analysis.js          # Statistics, histograms, time series
+├── calibration.js       # Calibration profiles and wizard
+├── errors.js            # Error classes
+├── validation.js        # Input validation
+├── dev-utils.js         # Logging and performance helpers
 ├── index.html           # Web interface
 ├── examples/            # Example applications
-├── tests/               # Test files
-│   └── unit/           # Unit tests
-├── .github/            # GitHub workflows
-│   └── workflows/      # CI/CD workflows
-├── docs/               # Generated documentation
-└── package.json        # Project configuration
+├── tests/               # Unit, integration, and E2E tests
+├── .github/workflows/   # CI/CD workflows
+└── package.json
 ```
 
 ## Adding New Features

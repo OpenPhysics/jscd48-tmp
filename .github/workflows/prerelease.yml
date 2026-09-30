@@ -151,7 +151,7 @@ jobs:
 
             ### Feedback
 
-            Please report any issues at https://github.com/OpenPhysics/jscd48/issues
+            Please report any issues at https://github.com/OpenPhysics/jscd48-tmp/issues
           draft: false
           prerelease: true
           files: |

@@ -63,5 +63,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MIT License
 - README.md with comprehensive documentation
 
-[Unreleased]: https://github.com/OpenPhysics/jscd48/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/OpenPhysics/jscd48/releases/tag/v0.1.0
+[Unreleased]: https://github.com/OpenPhysics/jscd48-tmp/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/OpenPhysics/jscd48-tmp/releases/tag/v0.1.0

@@ -187,8 +187,8 @@ import type { CalibrationProfile } from 'jscd48/calibration';
 If you encounter issues during migration:
 
 1. Check the [Troubleshooting Guide](./TROUBLESHOOTING.md)
-2. Review the [API Documentation](https://github.com/OpenPhysics/jscd48#api-reference)
-3. Open an issue at https://github.com/OpenPhysics/jscd48/issues
+2. Review the [API Documentation](https://github.com/OpenPhysics/jscd48-tmp#api-reference)
+3. Open an issue at https://github.com/OpenPhysics/jscd48-tmp/issues
 
 ## Version History
 

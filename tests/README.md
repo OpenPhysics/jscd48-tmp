@@ -6,15 +6,23 @@ Comprehensive test suite for the CD48 library including unit tests, integration 
 
 ```
 tests/
-├── e2e/                      # End-to-end tests
-│   ├── examples.spec.js      # Tests for all example pages
-│   ├── main-interface.spec.js     # Main interface tests
-│   ├── accessibility.spec.js      # Accessibility tests
-│   └── error-scenarios.spec.js    # Error handling tests
+├── unit/                     # Unit tests (Vitest)
+│   ├── cd48.test.js
+│   ├── errors.test.js
+│   └── validation.test.js
 ├── integration/              # Integration tests
 │   └── cd48-integration.test.js   # Mock hardware tests
-├── mock-cd48.js             # Mock CD48 device for testing
-└── README.md                # This file
+├── benchmarks/
+│   └── cd48.bench.js         # Benchmarks (npm run test:bench)
+├── mocks/
+│   └── web-serial.js         # Web Serial API mock
+├── e2e/                      # End-to-end tests (Playwright)
+│   ├── examples.spec.js      # Tests for all example pages
+│   ├── main-interface.spec.js
+│   ├── accessibility.spec.js
+│   └── error-scenarios.spec.js
+├── mock-cd48.js              # Mock CD48 device for testing
+└── README.md
 ```
 
 ## Running Tests
@@ -127,7 +135,7 @@ Tests for all 11 example pages:
 The `MockCD48` class simulates a real CD48 device without hardware:
 
 ```javascript
-import { MockCD48 } from './tests/mock-cd48.js';
+import { MockCD48 } from './mock-cd48.js';
 
 const cd48 = new MockCD48({
   autoIncrement: true,          // Auto-increment counts

@@ -1,18 +1,18 @@
 # jscd48 - JavaScript Interface for CD48 Coincidence Counter
 
 > **⚠️ Archived.** This repository is no longer maintained. It has been superseded by
-> [**tscd48**](https://github.com/OpenPhysics/tscd48), a TypeScript rewrite that is a strict
+> [**tscd48**](https://github.com/OpenPhysics/tscd48-tmp), a TypeScript rewrite that is a strict
 > superset of this library's features (same `CD48` API, plus branded types, a richer
 > reconnect state machine, and more). Please migrate to
-> [tscd48](https://github.com/OpenPhysics/tscd48) for new and existing projects.
+> [tscd48](https://github.com/OpenPhysics/tscd48-tmp) for new and existing projects.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/OpenPhysics/jscd48/workflows/CI/badge.svg)](https://github.com/OpenPhysics/jscd48/actions)
+[![CI](https://github.com/OpenPhysics/jscd48-tmp/workflows/CI/badge.svg)](https://github.com/OpenPhysics/jscd48-tmp/actions)
 [![codecov](https://codecov.io/gh/OpenPhysics/jscd48/branch/main/graph/badge.svg)](https://codecov.io/gh/OpenPhysics/jscd48)
 [![npm version](https://img.shields.io/npm/v/jscd48.svg)](https://www.npmjs.com/package/jscd48)
 [![Chrome](https://img.shields.io/badge/Chrome-89+-green.svg)](https://www.google.com/chrome/)
 [![Edge](https://img.shields.io/badge/Edge-89+-blue.svg)](https://www.microsoft.com/edge)
-[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen.svg)](https://openphysics.github.io/jscd48/)
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen.svg)](https://openphysics.github.io/jscd48-tmp/)
 
 A comprehensive browser-based JavaScript library and web interface for controlling the [Red Dog Physics CD48 Coincidence Counter](https://www.reddogphysics.com/cd48.html) using the Web Serial API.
 
@@ -26,13 +26,13 @@ A comprehensive browser-based JavaScript library and web interface for controlli
 - **Advanced analytics** - Statistical analysis, histograms, time-series tools
 - **Calibration wizard** - Step-by-step calibration with profile management
 - **Module bundles** - ESM, UMD, and minified builds for any project
-- **100+ tests** - Comprehensive unit, integration, E2E, and visual regression tests
+- **100+ tests** - Unit, integration, and end-to-end tests
 - **TypeScript support** - Full type definitions included
 - **Hot reload dev server** - Instant feedback during development
 
 ## 🚀 Live Demo
 
-**[https://openphysics.github.io/jscd48/](https://openphysics.github.io/jscd48/)**
+**[https://openphysics.github.io/jscd48-tmp/](https://openphysics.github.io/jscd48-tmp/)**
 
 Open the link above in Chrome or Edge, connect your CD48 via USB, and click "Connect".
 
@@ -98,7 +98,7 @@ Download `cd48.js` from the repository and include it in your HTML.
 - **High-level measurements** - Rate and coincidence measurement with accidental correction
 - **Clean JavaScript API** - Easy integration into custom applications
 - **TypeScript support** - Full TypeScript definitions included
-- **Comprehensive testing** - 100+ tests with E2E and visual regression
+- **Comprehensive testing** - 100+ unit, integration, and end-to-end tests
 
 ### Advanced Analysis Tools 📊
 
@@ -356,10 +356,13 @@ dist/
 
 ```json
 {
-  ".": "./cd48.js", // Main entry
-  "./analysis": "./analysis.js", // Analysis tools
-  "./calibration": "./calibration.js", // Calibration tools
-  "./dist/*": "./dist/*" // Direct dist access
+  ".": "./cd48.js",
+  "./errors": "./errors.js",
+  "./validation": "./validation.js",
+  "./analysis": "./analysis.js",
+  "./calibration": "./calibration.js",
+  "./dev-utils": "./dev-utils.js",
+  "./dist/*": "./dist/*"
 }
 ```
 
@@ -403,7 +406,7 @@ See [tests/README.md](tests/README.md) for detailed testing documentation.
 ### Setup
 
 ```bash
-git clone https://github.com/OpenPhysics/jscd48.git
+git clone https://github.com/OpenPhysics/jscd48-tmp.git
 cd jscd48
 npm install
 ```
