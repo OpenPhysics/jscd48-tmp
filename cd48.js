@@ -295,10 +295,12 @@ class CD48 {
       let response = '';
       const startTime = Date.now();
       const timeout = 1000;
+      let pendingRead = null;
 
       while (Date.now() - startTime < timeout) {
-        const { value, done } = await Promise.race([
-          this.reader.read(),
+        pendingRead ??= this.reader.read();
+        const result = await Promise.race([
+          pendingRead,
           this.sleep(100).then(() => ({
             value: '',
             done: false,
@@ -306,8 +308,10 @@ class CD48 {
           })),
         ]);
 
-        if (done) break;
-        if (value) response += value;
+        if (result.timeout) continue;
+        pendingRead = null;
+        if (result.done) break;
+        if (result.value) response += result.value;
 
         // Check if we have a complete response
         if (response.includes('\r') || response.includes('\n')) {
@@ -316,16 +320,19 @@ class CD48 {
       }
 
       // Check if we timed out
-      if (Date.now() - startTime >= timeout && !response) {
+      if (Date.now() - startTime >= timeout && (pendingRead || !response)) {
         throw new CommandTimeoutError(command, timeout);
       }
 
       return response.trim();
     } catch (error) {
-      if (
-        error instanceof CommandTimeoutError ||
-        error instanceof NotConnectedError
-      ) {
+      if (error instanceof CommandTimeoutError) {
+        // A timed-out read still owns the stream. Close it before a later
+        // command can have its reply consumed by that abandoned read.
+        await this._cleanupConnection();
+        throw error;
+      }
+      if (error instanceof NotConnectedError) {
         throw error;
       }
       throw new CommunicationError(error.message, error);

@@ -5,7 +5,11 @@ import {
 } from '../mocks/web-serial.js';
 
 // Import error classes
-import { NotConnectedError, InvalidChannelError } from '../../errors.js';
+import {
+  CommandTimeoutError,
+  NotConnectedError,
+  InvalidChannelError,
+} from '../../errors.js';
 
 // Import CD48 after mocks are set up
 const CD48Module = await import('../../cd48.js');
@@ -252,6 +256,28 @@ describe('CD48', () => {
       const version = await cd48.getVersion();
       expect(typeof version).toBe('string');
       expect(mocks.mockWriter.write).toHaveBeenCalledWith('v\r');
+    });
+
+    it('keeps one read pending while waiting for a delayed reply', async () => {
+      const pending = [];
+      mocks.mockReader.read.mockImplementation(
+        () => new Promise((resolve) => pending.push(resolve))
+      );
+      setTimeout(
+        () => pending[0]?.({ value: 'CD48 v1.0\r', done: false }),
+        150
+      );
+
+      await expect(cd48.getVersion()).resolves.toBe('CD48 v1.0');
+      expect(mocks.mockReader.read).toHaveBeenCalledTimes(1);
+    });
+
+    it('closes the stream when the response times out', async () => {
+      mocks.mockReader.read.mockImplementation(() => new Promise(() => {}));
+
+      await expect(cd48.sendCommand('v')).rejects.toThrow(CommandTimeoutError);
+      expect(mocks.mockReader.cancel).toHaveBeenCalledOnce();
+      expect(cd48.isConnected()).toBe(false);
     });
 
     it('should send getCounts command', async () => {
