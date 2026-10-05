@@ -260,16 +260,22 @@ describe('CD48', () => {
 
     it('keeps one read pending while waiting for a delayed reply', async () => {
       const pending = [];
-      mocks.mockReader.read.mockImplementation(
-        () => new Promise((resolve) => pending.push(resolve))
-      );
-      setTimeout(
-        () => pending[0]?.({ value: 'CD48 v1.0\r', done: false }),
-        150
-      );
+      let readsBeforeReply = 0;
+      mocks.mockReader.read.mockImplementation(() => {
+        readsBeforeReply += 1;
+        return new Promise((resolve) => pending.push(resolve));
+      });
+      setTimeout(() => {
+        // The drain reuses this read; a second read must not be queued
+        // until the first one resolves.
+        expect(readsBeforeReply).toBe(1);
+        pending[0]?.({ value: 'CD48 v1.0\r', done: false });
+      }, 150);
 
       await expect(cd48.getVersion()).resolves.toBe('CD48 v1.0');
-      expect(mocks.mockReader.read).toHaveBeenCalledTimes(1);
+      // After the line, one idle-gap probe is armed and left in flight.
+      expect(mocks.mockReader.read).toHaveBeenCalledTimes(2);
+      expect(pending).toHaveLength(2);
     });
 
     it('closes the stream when the response times out', async () => {

@@ -46,8 +46,27 @@ export function validateChannel(channel) {
     );
   }
 
-  if (channel < CHANNEL_MIN || channel > CHANNEL_MAX) {
+  if (
+    !Number.isInteger(channel) ||
+    channel < CHANNEL_MIN ||
+    channel > CHANNEL_MAX
+  ) {
     throw new InvalidChannelError(channel);
+  }
+}
+
+/**
+ * Validate a counter input enable (0 or 1).
+ * @param {string} name - Input name (A, B, C, or D)
+ * @param {number} value - Value to validate
+ * @throws {ValidationError} If value is not 0 or 1
+ */
+export function validateBinaryInput(name, value) {
+  if (typeof value !== 'number' || isNaN(value)) {
+    throw new ValidationError(name, value, 'must be 0 or 1');
+  }
+  if (!Number.isInteger(value) || (value !== 0 && value !== 1)) {
+    throw new ValidationError(name, value, 'must be 0 or 1');
   }
 }
 

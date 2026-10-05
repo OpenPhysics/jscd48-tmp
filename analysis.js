@@ -4,6 +4,32 @@
  */
 
 /**
+ * Minimum that does not spread the array (Math.min throws past the stack limit).
+ * @param {number[]} data
+ * @returns {number}
+ */
+function safeMin(data) {
+  let min = Infinity;
+  for (let i = 0; i < data.length; i++) {
+    if (data[i] < min) min = data[i];
+  }
+  return min;
+}
+
+/**
+ * Maximum that does not spread the array.
+ * @param {number[]} data
+ * @returns {number}
+ */
+function safeMax(data) {
+  let max = -Infinity;
+  for (let i = 0; i < data.length; i++) {
+    if (data[i] > max) max = data[i];
+  }
+  return max;
+}
+
+/**
  * Statistical analysis utilities for count data
  * @namespace Statistics
  */
@@ -40,6 +66,7 @@ export const Statistics = {
    */
   standardDeviation(data, sample = true) {
     if (!data || data.length === 0) return 0;
+    if (data.length === 1) return 0;
     const avg = this.mean(data);
     const squareDiffs = data.map((value) => Math.pow(value - avg, 2));
     const avgSquareDiff =
@@ -98,7 +125,12 @@ export const Statistics = {
     const sumXX = x.reduce((sum, xi) => sum + xi * xi, 0);
     const sumYY = y.reduce((sum, yi) => sum + yi * yi, 0);
 
-    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    const denominator = n * sumXX - sumX * sumX;
+    if (denominator === 0) {
+      return { slope: 0, intercept: 0, r2: 0 };
+    }
+
+    const slope = (n * sumXY - sumX * sumY) / denominator;
     const intercept = (sumY - slope * sumX) / n;
 
     // Calculate R-squared
@@ -108,7 +140,7 @@ export const Statistics = {
       const predicted = slope * x[i] + intercept;
       return sum + Math.pow(yi - predicted, 2);
     }, 0);
-    const r2 = 1 - ssResidual / ssTotal;
+    const r2 = ssTotal === 0 ? 0 : 1 - ssResidual / ssTotal;
 
     return { slope, intercept, r2 };
   },
@@ -136,8 +168,8 @@ export const Statistics = {
       median: this.median(data),
       std: this.standardDeviation(data),
       variance: this.variance(data),
-      min: Math.min(...data),
-      max: Math.max(...data),
+      min: safeMin(data),
+      max: safeMax(data),
       count: data.length,
     };
   },
@@ -163,9 +195,18 @@ export const Histogram = {
     }
 
     const bins = options.bins || 10;
-    const min = options.min !== undefined ? options.min : Math.min(...data);
-    const max = options.max !== undefined ? options.max : Math.max(...data);
+    const min = options.min !== undefined ? options.min : safeMin(data);
+    const max = options.max !== undefined ? options.max : safeMax(data);
     const binWidth = (max - min) / bins;
+
+    if (binWidth === 0) {
+      return {
+        bins: [min],
+        counts: [data.length],
+        edges: [min, min],
+        binWidth: 0,
+      };
+    }
 
     const counts = new Array(bins).fill(0);
     const edges = Array.from(
@@ -221,9 +262,15 @@ export const Histogram = {
     const iqr = q3 - q1;
 
     const binWidth = (2 * iqr) / Math.pow(data.length, 1 / 3);
-    const min = Math.min(...data);
-    const max = Math.max(...data);
-    const bins = Math.ceil((max - min) / binWidth) || 1;
+    const min = safeMin(data);
+    const max = safeMax(data);
+    const calculatedBins = Math.ceil((max - min) / binWidth);
+    const bins =
+      binWidth === 0
+        ? 1
+        : calculatedBins !== 0 && !Number.isNaN(calculatedBins)
+          ? calculatedBins
+          : 1;
 
     return this.create(data, { bins, min, max });
   },

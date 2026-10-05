@@ -23,10 +23,22 @@ import {
   DeviceSelectionCancelledError,
   CommandTimeoutError,
   InvalidResponseError,
+  InvalidChannelError,
   CommunicationError,
+  OverflowError,
 } from './errors.js';
 
-import { validateChannel, voltageToByte } from './validation.js';
+import {
+  validateBinaryInput,
+  validateChannel,
+  validateDuration,
+  voltageToByte,
+} from './validation.js';
+
+const COMMAND_TIMEOUT_MS = 1000;
+const READ_TIMEOUT_INTERVAL_MS = 100;
+const INPUT_DRAIN_MS = 15;
+const RESPONSE_IDLE_GAP_MS = 50;
 
 class CD48 {
   /**
@@ -52,9 +64,12 @@ class CD48 {
     this.readableStreamClosed = null;
     this.writableStreamClosed = null;
     this._lastCommandTime = 0;
+    this._rateLimitLock = Promise.resolve();
+    this._pendingRead = null;
     this._reconnecting = false;
     this._onDisconnect = null;
     this._onReconnect = null;
+    this._boundHandleDisconnect = null;
   }
 
   /**
@@ -100,6 +115,7 @@ class CD48 {
       await this._setupConnection();
       return true;
     } catch (error) {
+      await this._cleanupConnection();
       if (error.name === 'NotFoundError') {
         throw new DeviceSelectionCancelledError();
       }
@@ -123,8 +139,28 @@ class CD48 {
     this.writableStreamClosed = textEncoder.readable.pipeTo(this.port.writable);
     this.writer = textEncoder.writable.getWriter();
 
+    this._boundHandleDisconnect = () => {
+      void this._handleDisconnect();
+    };
+    if (typeof this.port.addEventListener === 'function') {
+      this.port.addEventListener('disconnect', this._boundHandleDisconnect);
+    }
+
     // Wait for device to initialize
     await this.sleep(500);
+  }
+
+  /**
+   * Handle an unexpected port disconnect the same way the TypeScript client does.
+   * @private
+   */
+  async _handleDisconnect() {
+    if (this._onDisconnect) {
+      this._onDisconnect();
+    }
+    if (this.autoReconnect) {
+      await this._attemptAutoReconnect();
+    }
   }
 
   /**
@@ -196,6 +232,7 @@ class CD48 {
    * @private
    */
   async _cleanupConnection() {
+    this._abandonPendingRead();
     if (this.reader) {
       try {
         await this.reader.cancel();
@@ -215,6 +252,16 @@ class CD48 {
       this.writer = null;
     }
     if (this.port) {
+      if (
+        this._boundHandleDisconnect &&
+        typeof this.port.removeEventListener === 'function'
+      ) {
+        this.port.removeEventListener(
+          'disconnect',
+          this._boundHandleDisconnect
+        );
+        this._boundHandleDisconnect = null;
+      }
       try {
         await this.port.close();
       } catch {
@@ -252,17 +299,194 @@ class CD48 {
   }
 
   /**
-   * Apply rate limiting between commands.
+   * Serialize write/read. The rate-limit sleep stays inside the lock, which
+   * is released only after the framed read finishes.
+   * @template T
+   * @param {() => Promise<T>} fn
+   * @returns {Promise<T>}
    * @private
    */
-  async _applyRateLimit() {
-    if (this.rateLimitMs > 0) {
-      const elapsed = Date.now() - this._lastCommandTime;
-      if (elapsed < this.rateLimitMs) {
-        await this.sleep(this.rateLimitMs - elapsed);
+  async _withCommandLock(fn) {
+    const previousLock = this._rateLimitLock;
+    let resolveCurrentLock;
+    this._rateLimitLock = new Promise((resolve) => {
+      resolveCurrentLock = resolve;
+    });
+
+    try {
+      await previousLock;
+      if (this.rateLimitMs > 0) {
+        const elapsed = Date.now() - this._lastCommandTime;
+        if (elapsed < this.rateLimitMs) {
+          await this.sleep(this.rateLimitMs - elapsed);
+        }
+      }
+      try {
+        return await fn();
+      } finally {
+        this._lastCommandTime = Date.now();
+      }
+    } finally {
+      resolveCurrentLock();
+    }
+  }
+
+  /**
+   * @returns {Promise<{value: string, done: boolean, timeout?: boolean}>}
+   * @private
+   */
+  _armPendingRead() {
+    if (this._pendingRead === null) {
+      if (!this.reader) {
+        this._pendingRead = Promise.resolve({ value: '', done: true });
+      } else {
+        const pending = this.reader.read().then((result) => ({
+          value: result.value ?? '',
+          done: result.done,
+        }));
+        pending.catch(() => {});
+        this._pendingRead = pending;
       }
     }
-    this._lastCommandTime = Date.now();
+    return this._pendingRead;
+  }
+
+  /**
+   * @param {number} waitMs
+   * @returns {Promise<{value: string, done: boolean, timeout?: boolean}>}
+   * @private
+   */
+  async _readFor(waitMs) {
+    const pending = this._armPendingRead();
+    const result = await Promise.race([
+      pending,
+      this.sleep(Math.max(0, waitMs)).then(() => ({
+        value: '',
+        done: false,
+        timeout: true,
+      })),
+    ]);
+    if (!result.timeout) {
+      this._pendingRead = null;
+    }
+    return result;
+  }
+
+  /**
+   * Discard bytes already buffered. A read that is still pending is kept.
+   * @private
+   */
+  async _drainPendingInput() {
+    const deadline = Date.now() + INPUT_DRAIN_MS;
+    while (Date.now() < deadline) {
+      const remaining = Math.max(1, deadline - Date.now());
+      const result = await this._readFor(remaining);
+      if (result.timeout || result.done || result.value === '') {
+        return;
+      }
+    }
+  }
+
+  /**
+   * Read until an idle gap after at least one line. Do not return a partial
+   * buffer when the overall timeout expires.
+   * @param {string} command
+   * @returns {Promise<string>}
+   * @private
+   */
+  async _readFramedResponse(command) {
+    let response = '';
+    let sawLine = false;
+    let lastDataAt = Date.now();
+    const started = Date.now();
+
+    while (Date.now() - started < COMMAND_TIMEOUT_MS) {
+      const remaining = COMMAND_TIMEOUT_MS - (Date.now() - started);
+      if (remaining <= 0) break;
+
+      const idleFor = Date.now() - lastDataAt;
+      if (
+        sawLine &&
+        idleFor >= RESPONSE_IDLE_GAP_MS &&
+        this._pendingRead === null
+      ) {
+        return response.trim();
+      }
+
+      const waitMs = sawLine
+        ? Math.min(remaining, Math.max(1, RESPONSE_IDLE_GAP_MS - idleFor))
+        : Math.min(remaining, READ_TIMEOUT_INTERVAL_MS);
+
+      const result = await this._readFor(waitMs);
+      if (result.timeout) {
+        if (sawLine && Date.now() - lastDataAt >= RESPONSE_IDLE_GAP_MS) {
+          return response.trim();
+        }
+        continue;
+      }
+      if (result.done) break;
+
+      if (result.value) {
+        response += result.value;
+        lastDataAt = Date.now();
+        if (response.includes('\r') || response.includes('\n')) {
+          sawLine = true;
+        }
+        continue;
+      }
+
+      if (sawLine) {
+        const gap = RESPONSE_IDLE_GAP_MS - (Date.now() - lastDataAt);
+        if (gap > 0) {
+          await this.sleep(
+            Math.min(
+              gap,
+              Math.max(0, COMMAND_TIMEOUT_MS - (Date.now() - started))
+            )
+          );
+        }
+        if (Date.now() - started >= COMMAND_TIMEOUT_MS) break;
+        const follow = await this._readFor(1);
+        if (follow.timeout || follow.done || !follow.value) {
+          return response.trim();
+        }
+        response += follow.value;
+        lastDataAt = Date.now();
+        continue;
+      }
+
+      await this.sleep(
+        Math.min(READ_TIMEOUT_INTERVAL_MS, Math.max(1, remaining))
+      );
+    }
+
+    this._abandonPendingRead();
+    throw new CommandTimeoutError(command, COMMAND_TIMEOUT_MS);
+  }
+
+  /**
+   * Attach a rejection handler before dropping an in-flight read.
+   * @private
+   */
+  _abandonPendingRead() {
+    if (this._pendingRead) {
+      this._pendingRead.catch(() => {});
+      this._pendingRead = null;
+    }
+  }
+
+  /**
+   * Close the port after a transport failure and reconnect when enabled.
+   * @param {Error} error
+   * @private
+   */
+  async _failTransport(error) {
+    this._abandonPendingRead();
+    await this._cleanupConnection();
+    if (this.autoReconnect) {
+      await this._attemptAutoReconnect();
+    }
+    throw error;
   }
 
   /**
@@ -271,72 +495,40 @@ class CD48 {
    * @returns {Promise<string>} Response from device
    */
   async sendCommand(command) {
-    if (!this.isConnected()) {
-      // Attempt auto-reconnect if enabled
-      if (this.autoReconnect) {
-        const reconnected = await this._attemptAutoReconnect();
-        if (!reconnected) {
+    return this._withCommandLock(async () => {
+      if (!this.isConnected()) {
+        if (this.autoReconnect) {
+          const reconnected = await this._attemptAutoReconnect();
+          if (!reconnected) {
+            throw new NotConnectedError('sendCommand');
+          }
+        } else {
           throw new NotConnectedError('sendCommand');
         }
-      } else {
-        throw new NotConnectedError('sendCommand');
       }
-    }
 
-    // Apply rate limiting
-    await this._applyRateLimit();
-
-    try {
-      // Clear any pending data
-      await this.writer.write(command + '\r');
-      await this.sleep(this.commandDelay);
-
-      // Read response with timeout
-      let response = '';
-      const startTime = Date.now();
-      const timeout = 1000;
-      let pendingRead = null;
-
-      while (Date.now() - startTime < timeout) {
-        pendingRead ??= this.reader.read();
-        const result = await Promise.race([
-          pendingRead,
-          this.sleep(100).then(() => ({
-            value: '',
-            done: false,
-            timeout: true,
-          })),
-        ]);
-
-        if (result.timeout) continue;
-        pendingRead = null;
-        if (result.done) break;
-        if (result.value) response += result.value;
-
-        // Check if we have a complete response
-        if (response.includes('\r') || response.includes('\n')) {
-          break;
+      try {
+        if (!this.writer || !this.reader) {
+          throw new NotConnectedError('sendCommand');
         }
-      }
 
-      // Check if we timed out
-      if (Date.now() - startTime >= timeout && (pendingRead || !response)) {
-        throw new CommandTimeoutError(command, timeout);
+        await this._drainPendingInput();
+        await this.writer.write(command + '\r');
+        await this.sleep(this.commandDelay);
+        return await this._readFramedResponse(command);
+      } catch (error) {
+        if (error instanceof NotConnectedError) {
+          throw error;
+        }
+        if (error instanceof CommandTimeoutError) {
+          await this._failTransport(error);
+        }
+        if (error instanceof CommunicationError) {
+          await this._failTransport(error);
+        }
+        await this._failTransport(new CommunicationError(error.message, error));
       }
-
-      return response.trim();
-    } catch (error) {
-      if (error instanceof CommandTimeoutError) {
-        // A timed-out read still owns the stream. Close it before a later
-        // command can have its reply consumed by that abandoned read.
-        await this._cleanupConnection();
-        throw error;
-      }
-      if (error instanceof NotConnectedError) {
-        throw error;
-      }
-      throw new CommunicationError(error.message, error);
-    }
+    });
   }
 
   /**
@@ -406,6 +598,10 @@ class CD48 {
    */
   async setChannel(channel, { A = 0, B = 0, C = 0, D = 0 } = {}) {
     validateChannel(channel);
+    validateBinaryInput('A', A);
+    validateBinaryInput('B', B);
+    validateBinaryInput('C', C);
+    validateBinaryInput('D', D);
     return await this.sendCommand(`S${channel}${A}${B}${C}${D}`);
   }
 
@@ -482,7 +678,25 @@ class CD48 {
    */
   async getOverflow() {
     const response = await this.sendCommand('E');
-    return parseInt(response);
+    const trimmed = response.trim();
+    if (!/^-?\d+$/.test(trimmed)) {
+      throw new InvalidResponseError(response, 'integer overflow flag');
+    }
+    return parseInt(trimmed, 10);
+  }
+
+  /**
+   * @param {number} overflow
+   * @param {number[]} channels
+   * @private
+   */
+  _assertNoOverflow(overflow, channels) {
+    const overflowed = channels.filter(
+      (channel) => (overflow & (1 << channel)) !== 0
+    );
+    if (overflowed.length > 0) {
+      throw new OverflowError(overflowed, overflow);
+    }
   }
 
   /**
@@ -501,11 +715,16 @@ class CD48 {
    */
   async measureRate(channel = 0, duration = 1.0) {
     validateChannel(channel);
+    validateDuration(duration);
 
     await this.clearCounts();
     await this.sleep(duration * 1000);
     const data = await this.getCounts(false);
+    this._assertNoOverflow(data.overflow, [channel]);
     const counts = data.counts[channel];
+    if (counts === undefined) {
+      throw new InvalidChannelError(channel);
+    }
     const rate = counts / duration;
 
     // Poisson uncertainty: sigma_N = sqrt(N)
@@ -546,13 +765,33 @@ class CD48 {
     coincidenceChannel = 4,
     coincidenceWindow = 25e-9,
   } = {}) {
+    validateDuration(duration);
+    validateChannel(singlesAChannel);
+    validateChannel(singlesBChannel);
+    validateChannel(coincidenceChannel);
+
     await this.clearCounts();
     await this.sleep(duration * 1000);
     const data = await this.getCounts(false);
+    this._assertNoOverflow(data.overflow, [
+      singlesAChannel,
+      singlesBChannel,
+      coincidenceChannel,
+    ]);
 
     const singlesA = data.counts[singlesAChannel];
     const singlesB = data.counts[singlesBChannel];
     const coincidences = data.counts[coincidenceChannel];
+    if (
+      singlesA === undefined ||
+      singlesB === undefined ||
+      coincidences === undefined
+    ) {
+      throw new InvalidResponseError(
+        String(data.counts),
+        'count for each requested channel'
+      );
+    }
 
     const rateA = singlesA / duration;
     const rateB = singlesB / duration;
