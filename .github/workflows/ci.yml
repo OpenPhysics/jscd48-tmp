@@ -75,7 +75,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e -- --project=chromium
-      - uses: actions/upload-artifact@v7.0.1
+      - uses: actions/upload-artifact@v7.0.2
         if: failure()
         with:
           name: e2e-failure-artifacts
