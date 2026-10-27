@@ -131,7 +131,7 @@
     "docdash": "^2.0.2",
     "eslint": "^10.13.0",
     "eslint-plugin-html": "^8.2.1",
-    "happy-dom": "^20.14.6",
+    "happy-dom": "^21.0.3",
     "husky": "^9.1.7",
     "jsdoc": "^4.0.5",
     "lint-staged": "^17.6.0",
