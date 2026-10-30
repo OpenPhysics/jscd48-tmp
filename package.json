@@ -106,8 +106,15 @@
     "lab-equipment"
   ],
   "engines": {
-    "node": ">=24",
+    "node": ">=26",
     "npm": ">=10.0.0"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=26",
+      "onFail": "error"
+    }
   },
   "author": "OpenPhysics Contributors",
   "license": "MIT",
