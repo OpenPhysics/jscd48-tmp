@@ -166,7 +166,7 @@ jobs:
           name: release-assets
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3.0.3
+        uses: softprops/action-gh-release@v3.0.4
         with:
           name: Release ${{ steps.get_version.outputs.TAG_NAME }}
           body_path: changelog.txt
