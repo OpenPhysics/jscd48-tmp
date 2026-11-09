@@ -130,7 +130,7 @@ jobs:
           name: prerelease-assets
 
       - name: Create GitHub Pre-release
-        uses: softprops/action-gh-release@v3.0.3
+        uses: softprops/action-gh-release@v3.0.4
         with:
           name: Pre-release v${{ needs.validate.outputs.version }}
           body: |
